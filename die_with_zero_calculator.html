@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="可即時調整人生階段、資產收支與報酬假設的退休資產互動計算機。">
+  <title>Die With Zero｜互動退休計算機</title>
+  <style>
+    :root { --paper:#f7f8fc; --white:#fff; --ink:#171924; --muted:#71798b; --border:#e6e9f0; --purple:#635bff; --purpleSoft:#eeeeff; --gold:#ffcd21; --red:#d95659; --green:#138a67; --shadow:0 12px 40px rgba(20,25,60,.045); }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);font-family:Inter,-apple-system,BlinkMacSystemFont,"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;color:var(--ink);line-height:1.55}
+    button,input{font:inherit}
+    main{width:min(1150px,calc(100% - 36px));margin:0 auto;padding:46px 0 60px}
+    .masthead{text-align:center;margin-bottom:29px}
+    .eyebrow{display:inline-block;padding:5px 13px;background:#fff7da;border:1px solid #ffeb9b;border-radius:999px;color:#8e6a00;font-size:12px;font-weight:800;letter-spacing:.07em}
+    h1{font-size:clamp(30px,4vw,42px);letter-spacing:-.045em;line-height:1.25;margin:13px 0 9px;font-weight:850}
+    h1 span{color:#e1ad00}
+    .masthead p{font-size:14px;color:var(--muted);margin:0}
+    .control-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:15px}
+    .panel,.metric,.chart-panel,.explain{background:var(--white);border:1px solid var(--border);border-radius:15px;box-shadow:var(--shadow)}
+    .panel{padding:22px 22px 15px;min-width:0}
+    .panel-title{display:flex;align-items:center;gap:9px;margin:0 0 17px;font-size:16px;font-weight:850}
+    .step{display:inline-grid;place-items:center;width:25px;height:25px;flex-shrink:0;border-radius:50%;background:#fff5c8;color:#806000;font-size:12px;font-weight:800}
+    .field{margin:0 0 17px}
+    .field-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+    .field label{font-size:13px;font-weight:730}
+    .numberbox{min-width:104px;height:34px;border:1px solid #e2e5ec;border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 9px;gap:6px}
+    .numberbox:focus-within{border-color:var(--purple);box-shadow:0 0 0 3px rgba(99,91,255,.1)}
+    .numberbox input{width:100%;min-width:0;border:0;background:transparent;outline:0;text-align:right;color:#242637;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+    .unit{font-size:11px;color:#9299a7;white-space:nowrap}
+    .hint{font-size:11px;color:#949bae;margin-top:4px;line-height:1.4}
+    input[type=range]{appearance:none;-webkit-appearance:none;width:100%;height:5px;background:#e9ebf1;border-radius:999px;outline:none;cursor:pointer;display:block;margin:11px 0 0}
+    input[type=range]::-webkit-slider-thumb{appearance:none;width:15px;height:15px;border-radius:50%;background:var(--gold);border:2px solid #fff;box-shadow:0 0 0 1px #e7b900;cursor:grab}
+    input[type=range]::-moz-range-thumb{width:12px;height:12px;border:2px solid white;border-radius:50%;background:var(--gold);cursor:grab}
+    .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:15px}
+    .metric{padding:17px 20px}
+    .metric-label{color:var(--muted);font-size:12px;font-weight:750;margin-bottom:5px}
+    .metric-value{font-size:clamp(21px,2.55vw,29px);font-weight:850;letter-spacing:-.045em;font-variant-numeric:tabular-nums;line-height:1.3}
+    .metric-note{font-size:11px;color:#9198a8;margin-top:4px;min-height:17px}
+    .purple{color:var(--purple)}.green{color:var(--green)}.red{color:var(--red)}
+    .chart-panel{padding:24px 24px 20px}
+    .chart-top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px}
+    .chart-title{font-size:17px;font-weight:850;margin:0}
+    .chart-sub{font-size:12px;color:var(--muted);margin:4px 0 0}
+    .legend{display:flex;gap:17px;align-items:center;font-size:12px;color:#70788a;margin-top:6px}
+    .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+    .visual{position:relative;margin-top:13px}
+    #assetChart{display:block;width:100%;height:auto;overflow:visible;touch-action:pan-y}
+    #assetChart text{font:12px Inter,-apple-system,"Noto Sans TC",sans-serif;fill:#8c94a7}
+    #assetChart .grid{stroke:#edf0f6;stroke-width:1}
+    #assetChart .axis{stroke:#dfe3ed;stroke-width:1}
+    .tooltip{position:absolute;z-index:5;min-width:154px;padding:9px 12px;background:#23243a;color:white;border-radius:10px;pointer-events:none;box-shadow:0 8px 24px #15152936;font-size:12px;transform:translate(-50%,-118%);white-space:nowrap}
+    .tooltip strong{display:block;font-size:14px;margin-top:2px;color:white}
+    .hidden{display:none!important}
+    .chart-foot{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;color:#939aaa;font-size:11px;border-top:1px solid #f0f1f5;padding-top:13px}
+    .warning{margin:12px 0 0;border-radius:10px;background:#fff6e2;color:#866200;padding:12px 14px;font-size:13px}
+    .explain{margin-top:15px;padding:15px 21px;font-size:13px;color:#677084}
+    .explain summary{font-size:13px;font-weight:820;color:#34384d;cursor:pointer}
+    .explain p{margin:10px 0 4px}.explain code{color:#4d49c0;background:#f4f3ff;padding:2px 5px;border-radius:4px}
+    .explain ul{margin:7px 0 2px;padding-left:21px}
+    .footnote{text-align:center;color:#9ca3b2;font-size:11px;margin-top:17px}
+    @media(max-width:850px){.control-grid{grid-template-columns:1fr 1fr}.control-grid .panel:last-child{grid-column:1 / -1}.panel:last-child .fields{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}}
+    @media(max-width:600px){main{width:min(100% - 24px,1150px);padding-top:25px}.control-grid,.metrics{grid-template-columns:1fr}.control-grid .panel:last-child{grid-column:auto}.panel:last-child .fields{display:block}.panel{padding:18px 18px 9px}.metrics{grid-template-columns:1fr 1fr;gap:9px}.metric{padding:14px}.metric:last-child{grid-column:1 / -1}.chart-panel{padding:16px 8px 14px}.chart-top,.chart-foot{padding:0 9px}.legend{margin-top:0}.chart-sub{line-height:1.6}.metric-value{font-size:23px}}
+    @media(prefers-reduced-motion:no-preference){.panel,.metric,.chart-panel{transition:box-shadow .16s ease} input[type=range]::-webkit-slider-thumb{transition:transform .15s ease} input[type=range]:active::-webkit-slider-thumb{transform:scale(1.15)}}
+  </style>
+</head>
+<body>
+<main>
+  <header class="masthead">
+    <div class="eyebrow">互動式理財實驗室 · 純前端示範</div>
+    <h1>Die With Zero <span>計算機</span></h1>
+    <p>自由調整每個參數，即時觀察退休資產如何隨年齡變化。</p>
+  </header>
+
+  <section class="control-grid" aria-label="試算參數">
+    <div class="panel">
+      <h2 class="panel-title"><span class="step">1</span>關於你</h2>
+      <div class="fields">
+        <div class="field" data-key="currentAge">
+          <div class="field-top"><label for="currentAge">目前年齡</label><div class="numberbox"><input id="currentAge" type="number" min="18" max="85" step="1" value="30"><span class="unit">歲</span></div></div>
+          <input type="range" min="18" max="85" step="1" value="30" aria-label="目前年齡滑桿">
+        </div>
+        <div class="field" data-key="retirementAge">
+          <div class="field-top"><label for="retirementAge">預計退休年齡</label><div class="numberbox"><input id="retirementAge" type="number" min="35" max="90" step="1" value="65"><span class="unit">歲</span></div></div>
+          <input type="range" min="35" max="90" step="1" value="65" aria-label="退休年齡滑桿">
+        </div>
+        <div class="field" data-key="lifeAge">
+          <div class="field-top"><label for="lifeAge">預計壽命</label><div class="numberbox"><input id="lifeAge" type="number" min="50" max="110" step="1" value="84"><span class="unit">歲</span></div></div>
+          <input type="range" min="50" max="110" step="1" value="84" aria-label="預計壽命滑桿">
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2 class="panel-title"><span class="step">2</span>資產與收支</h2>
+      <div class="fields">
+        <div class="field" data-key="initialAssets">
+          <div class="field-top"><label for="initialAssets">目前總資產</label><div class="numberbox"><input id="initialAssets" type="number" min="0" max="50000000" step="100000" value="1000000"><span class="unit">元</span></div></div>
+          <input type="range" min="0" max="50000000" step="100000" value="1000000" aria-label="目前總資產滑桿">
+          <div class="hint">投資、儲蓄等可供退休使用的資金</div>
+        </div>
+        <div class="field" data-key="monthlyInvest">
+          <div class="field-top"><label for="monthlyInvest">退休前每月投入</label><div class="numberbox"><input id="monthlyInvest" type="number" min="0" max="300000" step="1000" value="20000"><span class="unit">元</span></div></div>
+          <input type="range" min="0" max="300000" step="1000" value="20000" aria-label="每月投入滑桿">
+        </div>
+        <div class="field" data-key="monthlySpend">
+          <div class="field-top"><label for="monthlySpend">退休後每月花費</label><div class="numberbox"><input id="monthlySpend" type="number" min="0" max="300000" step="1000" value="60000"><span class="unit">元</span></div></div>
+          <input type="range" min="0" max="300000" step="1000" value="60000" aria-label="退休每月花費滑桿">
+          <div class="hint">以今天的購買力計算，未來隨通膨調整</div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2 class="panel-title"><span class="step">3</span>進階假設</h2>
+      <div class="fields">
+        <div class="field" data-key="annualReturn">
+          <div class="field-top"><label for="annualReturn">年化投資報酬率</label><div class="numberbox"><input id="annualReturn" type="number" min="-10" max="20" step="0.5" value="7"><span class="unit">% / 年</span></div></div>
+          <input type="range" min="-10" max="20" step="0.5" value="7" aria-label="報酬率滑桿">
+        </div>
+        <div class="field" data-key="inflation">
+          <div class="field-top"><label for="inflation">年通貨膨脹率</label><div class="numberbox"><input id="inflation" type="number" min="0" max="10" step="0.25" value="3"><span class="unit">% / 年</span></div></div>
+          <input type="range" min="0" max="10" step="0.25" value="3" aria-label="通貨膨脹滑桿">
+        </div>
+        <p class="hint" style="margin-top:8px">所有投資報酬都是固定年化假設，不代表實際市場每年會獲得相同報酬。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="metrics" aria-label="試算結果">
+    <div class="metric"><div class="metric-label">退休時預估資產</div><div class="metric-value purple" id="atRetirement">—</div><div class="metric-note">退休開始時的名目金額</div></div>
+    <div class="metric"><div class="metric-label">預計壽命結束的餘額</div><div class="metric-value" id="atEnd">—</div><div class="metric-note" id="endNote">扣除退休花費後</div></div>
+    <div class="metric"><div class="metric-label">每月可持續花費</div><div class="metric-value" id="safeSpend">—</div><div class="metric-note">恰好在預計壽命時用盡，以今天幣值估計</div></div>
+  </section>
+
+  <section class="chart-panel" aria-label="資產趨勢">
+    <div class="chart-top">
+      <div><h2 class="chart-title">你的資產隨時間變化</h2><p class="chart-sub" id="chartDescription">退休前持續累積；退休後投資收益與生活支出同時影響資產。</p></div>
+      <div class="legend"><span><i style="background:#635bff"></i>資產</span><span><i style="background:#ffcd21"></i>退休</span></div>
+    </div>
+    <div class="warning hidden" role="alert" id="validation"></div>
+    <div class="visual" id="visual">
+      <svg id="assetChart" viewBox="0 0 940 380" role="img" aria-label="依年齡顯示資產預測的折線面積圖"></svg>
+      <div id="chartTooltip" class="tooltip hidden"><span id="tooltipAge"></span><strong id="tooltipMoney"></strong></div>
+    </div>
+    <div class="chart-foot"><span id="depletionText">—</span><span>幣別：新臺幣（TWD）｜每月底投入或提領</span></div>
+  </section>
+
+  <details class="explain">
+    <summary>這個計算機是怎麼計算的？（展開公式與假設）</summary>
+    <p>以「每月」為單位模擬：退休前把每月投入的錢加到資產，退休後則從資產扣除花費；資產每月依設定的報酬率成長或減少。</p>
+    <p><code>當月底資產 = 當月初資產 × (1 + 月報酬率) + 當月投入 − 當月提領</code></p>
+    <ul>
+      <li>月報酬率：<code>(1 + 年化報酬率)^(1/12) − 1</code>。</li>
+      <li>月通膨率：<code>(1 + 年通膨率)^(1/12) − 1</code>。</li>
+      <li>退休花費採「今天幣值」，每個月依通膨率上調；退休前的固定月投入不隨通膨增加。</li>
+      <li>「每月可持續花費」是反覆試算，找出到預計壽命時帳面餘額約為零的今天幣值月支出。</li>
+      <li>若退休金提早用盡，餘額以零顯示；未計入稅、手續費、投資波動、勞保勞退等其他收入。</li>
+    </ul>
+  </details>
+  <div class="footnote">此工具僅供情境試算，不構成投資或財務規劃建議。</div>
+</main>
+<script>
+  'use strict';
+
+  // ① 唯一的參數狀態：所有欄位與試算都讀取這個物件。
+  const state = {
+    currentAge: 30,
+    retirementAge: 65,
+    lifeAge: 84,
+    initialAssets: 1000000,
+    monthlyInvest: 20000,
+    monthlySpend: 60000,
+    annualReturn: 7,
+    inflation: 3
+  };
+
+  const nfmt = new Intl.NumberFormat('zh-TW', {maximumFractionDigits:0});
+  function money(value) {
+    if (!Number.isFinite(value)) return '—';
+    if (Math.abs(value) >= 1e8) return `${(value / 1e8).toFixed(2)} 億元`;
+    if (Math.abs(value) >= 1e4) return `${(value / 1e4).toFixed(1)} 萬元`;
+    return `${nfmt.format(Math.round(value))} 元`;
+  }
+  function ageText(value) { return `${Number(value).toFixed(1).replace(/\.0$/, '')} 歲`; }
+
+  // ② 財務模型：pure function，不接觸畫面，方便單獨測試。
+  function simulate(s, spendingToday = s.monthlySpend) {
+    const months = Math.round((s.lifeAge - s.currentAge) * 12);
+    const retirementMonth = Math.round((s.retirementAge - s.currentAge) * 12);
+    const monthlyReturn = Math.pow(1 + s.annualReturn / 100, 1 / 12) - 1;
+    const monthlyInflation = Math.pow(1 + s.inflation / 100, 1 / 12) - 1;
+    let assets = s.initialAssets;
+    let atRetirement = null;
+    let depletionAge = null;
+    const points = [{age:s.currentAge, assets}];
+
+    for (let m = 0; m < months; m++) {
+      if (m === retirementMonth) atRetirement = assets;
+      if (m < retirementMonth) {
+        assets = assets * (1 + monthlyReturn) + s.monthlyInvest;
+      } else if (depletionAge === null) {
+        const spending = spendingToday * Math.pow(1 + monthlyInflation, m);
+        assets = assets * (1 + monthlyReturn) - spending;
+        if (assets <= 0) {
+          assets = 0;
+          depletionAge = s.currentAge + (m + 1) / 12;
+        }
+      }
+      points.push({age:s.currentAge + (m + 1) / 12, assets:Math.max(0,assets)});
+    }
+    return {points, atRetirement:atRetirement ?? assets, atEnd:assets, depletionAge};
+  }
+
+  // ③ 二分搜尋：試出「壽命結束時用得剛剛好」的最大每月花費。
+  function sustainableSpend(s) {
+    // 如果本來就沒有可用資產，而且每月也不投入，則必為零。
+    if (s.initialAssets === 0 && s.monthlyInvest === 0) return 0;
+    let low = 0, high = 10000;
+    while (simulate(s, high).depletionAge === null && high < 1e12) high *= 2;
+    for (let i = 0; i < 48; i++) {
+      const mid = (low + high) / 2;
+      const result = simulate(s, mid);
+      // 允許最後一個月恰好用盡，但不能早於預期壽命。
+      if (result.depletionAge !== null && result.depletionAge < s.lifeAge - 1 / 24) high = mid;
+      else low = mid;
+    }
+    return low;
+  }
+
+  // ④ 將圖表用原生 SVG 繪製，不必安裝任何套件或建立後端。
+  const svg = document.querySelector('#assetChart');
+  const tooltip = document.querySelector('#chartTooltip');
+  const PL = 91, PR = 19, PT = 17, PB = 45, SW = 940, SH = 380;
+  let chartData = null;
+  function drawChart(s, result) {
+    const W = SW - PL - PR, H = SH - PT - PB;
+    const maxPoint = Math.max(...result.points.map(p=>p.assets), 1);
+    const maxY = Math.max(1e5,Math.ceil(maxPoint / 1e5 / 4) * 1e5 * 5);
+    const x = age => PL + (age - s.currentAge) / (s.lifeAge - s.currentAge) * W;
+    const y = a => PT + H * (1 - Math.max(0,a)/maxY);
+    const coords = result.points.map(p=>[x(p.age), y(p.assets)]);
+    const path = coords.map(([px,py],i)=>`${i===0?'M':'L'}${px.toFixed(2)},${py.toFixed(2)}`).join(' ');
+    const area = `${path} L${(PL+W).toFixed(2)},${PT+H} L${PL},${PT+H} Z`;
+    let marks = '';
+    for (let i=0; i<=5; i++) {
+      const value = maxY*i/5, yy = y(value);
+      marks += `<line class="grid" x1="${PL}" x2="${PL+W}" y1="${yy}" y2="${yy}"/>`;
+      marks += `<text text-anchor="end" x="${PL-13}" y="${yy+4}">${money(value).replace(' 元','').replace('元','')}</text>`;
+    }
+    const ticks = 7;
+    for (let i=0;i<=ticks;i++) {
+      const age = s.currentAge + (s.lifeAge - s.currentAge)*i/ticks;
+      marks += `<text text-anchor="middle" x="${x(age)}" y="${SH-12}">${Math.round(age)}歲</text>`;
+    }
+    const retirementX = x(s.retirementAge);
+    svg.innerHTML = `
+      <defs><linearGradient id="assetFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#635bff" stop-opacity=".29"/><stop offset="100%" stop-color="#635bff" stop-opacity=".012"/></linearGradient></defs>
+      ${marks}
+      <line class="axis" x1="${PL}" x2="${PL+W}" y1="${PT+H}" y2="${PT+H}"/>
+      <path d="${area}" fill="url(#assetFill)"/>
+      <path d="${path}" fill="none" stroke="#635bff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="${retirementX}" x2="${retirementX}" y1="${PT}" y2="${PT+H}" stroke="#e6b20b" stroke-width="1.7" stroke-dasharray="5 5"/>
+      <rect x="${retirementX-26}" y="${PT+5}" width="52" height="24" rx="6" fill="#ffcd21"/>
+      <text x="${retirementX}" y="${PT+21}" fill="#3b2f00" text-anchor="middle" style="font-weight:800;fill:#493700;font-size:11px">退休 ${s.retirementAge}</text>
+      <line id="hoverLine" x1="0" x2="0" y1="${PT}" y2="${PT+H}" stroke="#aaa7ff" stroke-dasharray="4 5" visibility="hidden" />
+      <circle id="hoverDot" cx="0" cy="0" r="6" fill="#635bff" stroke="#fff" stroke-width="3" visibility="hidden"/>
+      <rect x="${PL}" y="${PT}" width="${W}" height="${H}" fill="transparent" pointer-events="all" id="hoverArea"/>
+    `;
+    chartData = {points:result.points, x, y, left:PL, right:PL+W};
+    svg.querySelector('#hoverArea').addEventListener('pointermove', onPointerMove);
+    svg.querySelector('#hoverArea').addEventListener('pointerleave', hideTooltip);
+  }
+
+  function onPointerMove(event) {
+    if (!chartData) return;
+    const point = svg.createSVGPoint();
+    point.x = event.clientX; point.y = event.clientY;
+    const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+    const {points,x,y,left,right} = chartData;
+    if (svgPoint.x < left || svgPoint.x > right) return hideTooltip();
+    const idx = Math.max(0,Math.min(points.length-1,Math.round((svgPoint.x-left)/(right-left)*(points.length-1))));
+    const p = points[idx], px = x(p.age), py = y(p.assets);
+    svg.querySelector('#hoverLine').setAttribute('x1',px);
+    svg.querySelector('#hoverLine').setAttribute('x2',px);
+    svg.querySelector('#hoverLine').setAttribute('visibility','visible');
+    const dot = svg.querySelector('#hoverDot'); dot.setAttribute('cx',px);dot.setAttribute('cy',py);dot.setAttribute('visibility','visible');
+    document.querySelector('#tooltipAge').textContent = ageText(p.age);
+    document.querySelector('#tooltipMoney').textContent = money(p.assets);
+    const box = svg.getBoundingClientRect();
+    tooltip.style.left = `${(px / SW) * box.width}px`;
+    tooltip.style.top = `${(py / SH) * box.height}px`;
+    tooltip.classList.remove('hidden');
+  }
+  function hideTooltip() {
+    tooltip.classList.add('hidden');
+    const line = svg.querySelector('#hoverLine'), dot = svg.querySelector('#hoverDot');
+    if (line) line.setAttribute('visibility','hidden');
+    if (dot) dot.setAttribute('visibility','hidden');
+  }
+
+  function render() {
+    const error = document.querySelector('#validation');
+    if (!(state.currentAge < state.retirementAge && state.retirementAge < state.lifeAge)) {
+      error.textContent = '請確認年齡順序：目前年齡 < 退休年齡 < 預計壽命。';
+      error.classList.remove('hidden');
+      document.querySelector('#visual').classList.add('hidden');
+      for (const id of ['atRetirement','atEnd','safeSpend']) document.getElementById(id).textContent='—';
+      document.querySelector('#depletionText').textContent = '請先修正年齡設定';
+      return;
+    }
+    error.classList.add('hidden');
+    document.querySelector('#visual').classList.remove('hidden');
+    const result = simulate(state);
+    document.querySelector('#atRetirement').textContent = money(result.atRetirement);
+    document.querySelector('#atEnd').textContent = money(result.atEnd);
+    const endEl = document.querySelector('#atEnd');
+    endEl.className = `metric-value ${result.depletionAge === null ? 'green' : 'red'}`;
+    document.querySelector('#endNote').textContent = result.depletionAge === null ? '在預計壽命時仍保有資產' : '退休資金已提早或於壽命終點耗盡';
+    document.querySelector('#safeSpend').textContent = money(sustainableSpend(state));
+    document.querySelector('#depletionText').textContent = result.depletionAge === null
+      ? `到 ${state.lifeAge} 歲仍有剩餘資產`
+      : `預計在 ${ageText(result.depletionAge)} 用盡可用資產`;
+    drawChart(state,result);
+  }
+
+  // ⑤ 事件綁定：拉滑桿、改數字，都只做「更新 state → render()」。
+  document.querySelectorAll('.field[data-key]').forEach(field => {
+    const key = field.dataset.key;
+    const numberInput = field.querySelector('input[type=number]');
+    const slider = field.querySelector('input[type=range]');
+    function update(source, other) {
+      if (source.value === '') return;
+      const value = Number(source.value);
+      if (!Number.isFinite(value)) return;
+      const min = Number(source.min), max = Number(source.max);
+      state[key] = Math.max(min, Math.min(max, value));
+      other.value = state[key];
+      // 數字輸入時保留正在輸入中的文字，離開欄位時再正規化。
+      render();
+    }
+    numberInput.addEventListener('input',() => update(numberInput,slider));
+    numberInput.addEventListener('blur',() => {numberInput.value = state[key];});
+    slider.addEventListener('input',() => {update(slider,numberInput);numberInput.value=state[key];});
+  });
+
+  render();
+</script>
+</body>
+</html>
